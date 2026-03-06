@@ -28,7 +28,7 @@ _sessions: dict[str, dict] = {}
 def _get_state() -> dict:
     sid = app.storage.browser.get("_sid")
     if not sid:
-        sid = str(time.time_ns())
+        sid = secrets.token_hex(16)
         app.storage.browser["_sid"] = sid
     if sid not in _sessions:
         _sessions[sid] = {
@@ -224,7 +224,8 @@ async def index():
 
 def _handle_upload(e: events.UploadEventArguments, file_label: ui.label, state: dict):
     """Save uploaded file to temp dir."""
-    dest = UPLOAD_DIR / e.name
+    safe_name = Path(e.name).name  # strip any directory components
+    dest = UPLOAD_DIR / safe_name
     with open(dest, "wb") as f:
         f.write(e.content.read())
     state["cv_path"] = str(dest)
@@ -574,5 +575,5 @@ ui.run(
     title="CV Tailor Agent",
     port=int(os.environ.get("PORT", 8081)),
     reload=False,
-    storage_secret="cv_tailor_secret_key_change_me",
+    storage_secret=os.environ.get("STORAGE_SECRET", secrets.token_hex(32)),
 )
